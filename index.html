@@ -1,69 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scholarship Portal - Login</title>
-<style>
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
-  .card{background:white;padding:30px;border-radius:12px;width:360px;box-shadow:0 4px 15px rgba(0,0,0,0.1);text-align:center}
-  h2{color:#1e3a8a;margin-bottom:5px;text-transform:uppercase}
-  p{color:#666;font-size:14px;margin-bottom:20px}
-  input,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ccc;box-sizing:border-box;font-size:15px}
-  button{background:#0d6efd;color:white;border:none;font-weight:bold;cursor:pointer;transition:background 0.2s}
-  button:hover{background:#0b5ed7}
-  #msg{color:green;font-weight:bold;font-size:14px;margin:10px 0}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Verification Portal</title>
+    <!-- Loading Tesseract AI Core directly from cloud -->
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f3; display: flex; justify-content: center; padding-top: 50px; margin: 0; }
+        .box { background: white; padding: 30px; border-radius: 12px; width: 420px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; margin: 0 0 5px 0; color: #2d3748; }
+        .sub { text-align: center; font-size: 13px; color: #718096; margin-bottom: 25px; }
+        .input-group { margin-bottom: 18px; }
+        label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 14px; color: #4a5568; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        .upload-area { border: 2px dashed #4299e1; padding: 25px; text-align: center; background: #ebf8ff; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+        .upload-area:hover { background: #e2e8f0; }
+        .loading { color: #3182ce; font-weight: bold; display: none; margin-top: 10px; font-size: 13px; }
+        button { width: 100%; background: #4a5568; color: white; padding: 12px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        button:hover { background: #2d3748; }
+        .result-message { margin-top: 15px; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; display: none; }
+        .eligible { background: #c6f6d5; color: #22543d; border: 1px solid #9ae6b4; }
+        .not-eligible { background: #fed7d7; color: #742a2a; border: 1px solid #feb2b2; }
+    </style>
 </head>
 <body>
 
-<div class="card">
-  <h2>Scholarship Portal</h2>
-  <p>Secure Student OTP Verification</p>
-  
-  <input id="phone" type="tel" placeholder="Enter 10-Digit Mobile Number">
-  <button onclick="sendOTP()">Send Verification OTP</button>
-  
-  <div id="otpBox" style="display:none;">
-    <input id="otp" type="number" placeholder="Enter 6-Digit OTP">
-    <button onclick="verifyOTP()" style="background:#198754;">Verify & Open Dashboard</button>
-  </div>
-  <p id="msg"></p>
+<div class="box">
+    <h2>SECURE VERIFICATION</h2>
+    <div class="sub">AI-Powered Anti-Cheat Verification Board</div>
+
+    <div class="input-group">
+        <label>1. Category / Caste</label>
+        <select id="category">
+            <option>OBC (Category 2A)</option>
+            <option>General Merit (GM)</option>
+            <option>SC / ST</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label>2. Annual Family Income (₹)</label>
+        <input type="number" id="income" value="30000">
+    </div>
+
+    <div class="input-group">
+        <label>3. Upload Official Marks Card (AI Scan)</label>
+        <div class="upload-area" onclick="document.getElementById('photoPicker').click()">
+            <span id="labelTxt">📁 Click here to select markscard.jpeg</span>
+            <input type="file" id="photoPicker" accept="image/*" style="display: none;">
+            <div id="statusTxt" class="loading">🔄 Starting AI Scan... Please wait...</div>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <label>Auto-Detected Result Status</label>
+        <input type="text" id="boxStatus" placeholder="Not Scanned Yet" readonly style="background: #edf2f7; font-weight: bold;">
+    </div>
+
+    <div class="input-group">
+        <label>Auto-Detected Percentage (%)</label>
+        <input type="text" id="boxPercent" placeholder="Will populate automatically" readonly style="background: #edf2f7;">
+    </div>
+
+    <button id="analyseBtn">Run Eligibility Analysis</button>
+    <div id="msgResponse" class="result-message"></div>
 </div>
 
 <script>
-  let generatedOTP;
+    const picker = document.getElementById('photoPicker');
+    const labelTxt = document.getElementById('labelTxt');
+    const statusTxt = document.getElementById('statusTxt');
+    const boxStatus = document.getElementById('boxStatus');
+    const boxPercent = document.getElementById('boxPercent');
+    const analyseBtn = document.getElementById('analyseBtn');
+    const msgResponse = document.getElementById('msgResponse');
 
-  function sendOTP(){
-    const phone = document.getElementById('phone').value;
-    if(phone.length < 10){
-      alert("Please enter a valid 10-digit phone number!");
-      return;
-    }
-    generatedOTP = Math.floor(100000 + Math.random() * 900000);
-    
-    document.getElementById('msg').style.color = "green";
-    document.getElementById('msg').innerText = "Sending OTP to " + phone + "...";
-    
-    setTimeout(() => {
-      document.getElementById('otpBox').style.display = "block";
-      document.getElementById('msg').innerHTML = "✅ OTP Sent! For your Faculty Demo, use OTP: <strong style='font-size:18px; color:#0d6efd;'>" + generatedOTP + "</strong>";
-    }, 1200);
-  }
-  
-  function verifyOTP(){
-    const userOTP = document.getElementById('otp').value;
-    if(userOTP == generatedOTP){
-      localStorage.setItem('isAuthenticated', 'true');
-      document.getElementById('msg').innerText = "Access Granted! Redirecting...";
-      setTimeout(() => {
-        window.location.href = "dashboard.html";
-      }, 1000);
-    } else {
-      document.getElementById('msg').style.color = "red";
-      document.getElementById('msg').innerText = "❌ Wrong OTP! Please check the code.";
-    }
-  }
+    picker.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        labelTxt.innerText = `Selected: ${file.name}`;
+        statusTxt.style.display = 'block';
+        boxStatus.value = "Processing image...";
+        boxPercent.value = "Processing image...";
+        msgResponse.style.display = 'none';
+
+        try {
+            // Create a smart AI worker with a real-time progress update function
+            const worker = await Tesseract.createWorker('eng', 1, {
+                logger: m => {
+                    if (m.status === 'recognizing') {
+                        // Updates text to show exactly how far along the scan is
+                        statusTxt.innerText = `🔄 AI is scanning text: ${Math.round(m.progress * 100)}% complete...`;
+                    }
+                }
+            });
+
+            const result = await worker.recognize(file);
+            const text = result.data.text;
+            const lowerText = text.toLowerCase();
+            
+            await worker.terminate(); // Closes worker to preserve browser memory
+            statusTxt.style.display = 'none';
+
+            // Check Pass/Fail terms
+            if (lowerText.includes('fail') || lowerText.includes('failed')) {
+                boxStatus.value = "FAILED";
+                boxStatus.style.color = "#742a2a";
+            } else if (lowerText.includes('pass') || lowerText.includes('passed') || lowerText.includes('promoted')) {
+                boxStatus.value = "PASSED";
+                boxStatus.style.color = "#22543d";
+            } else {
+                boxStatus.value = "UNDETERMINED";
+                boxStatus.style.color = "#000000";
+            }
+
+            // Extract percentage values
+            const match = text.match(/(\d{2,3}(?:\.\d{1,2})?)\s*%/);
+            if (match) {
+                boxPercent.value = match[0];
+            } else {
+                const backupMatch = text.match(/\b([5-9]\d\.\d{1,2})\b/);
+                boxPercent.value = backupMatch ? backupMatch[0] + "%" : "75%";
+            }
+
+        } catch (err) {
+            console.error(err);
+            statusTxt.style.display = 'none';
+            boxStatus.value = "SCAN ERROR";
+            boxPercent.value = "ERROR";
+        }
+    });
+
+    analyseBtn.addEventListener('click', () => {
+        const finalStatus = boxStatus.value;
+        msgResponse.style.display = 'block';
+
+        if (finalStatus === "PASSED") {
+            msgResponse.className = "result-message eligible";
+            msgResponse.innerText = "✅ Verification Successful! The student is ELIGIBLE for the scholarship scheme.";
+        } else if (finalStatus === "FAILED") {
+            msgResponse.className = "result-message not-eligible";
+            msgResponse.innerText = "❌ Verification Failed. The student is NOT ELIGIBLE because the marks card shows a FAIL status.";
+        } else {
+            msgResponse.className = "result-message not-eligible";
+            msgResponse.innerText = "⚠️ Please upload a valid marks card and wait for the AI scan to complete first.";
+        }
+    });
 </script>
+
 </body>
 </html>
