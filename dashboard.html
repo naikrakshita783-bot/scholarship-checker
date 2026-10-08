@@ -1,185 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scholarship Portal - Secure Dashboard</title>
-<script src="https://jsdelivr.net"></script>
-<style>
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;display:flex;justify-content:center;padding:20px;margin:0}
-  .container{width:100%;max-width:450px}
-  .card{background:white;padding:25px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.1);margin-bottom:20px}
-  h2,h3{text-align:center;color:#1e3a8a;margin-top:0;text-transform:uppercase;letter-spacing:.5px}
-  label{font-weight:bold;display:block;margin-top:15px;color:#333;font-size:14px}
-  input,select,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ccc;box-sizing:border-box;font-size:15px}
-  button{background:#0d6efd;color:white;border:none;font-weight:bold;cursor:pointer;transition:background 0.2s;margin-top:15px}
-  button:hover{background:#0b5ed7}
-  .scanner-box{background:#e9ecef;border:2px dashed #0d6efd;padding:15px;text-align:center;border-radius:8px;margin:10px 0}
-  .scheme-item{background:#f8f9fa;border-left:4px solid #198754;padding:12px;margin:10px 0;border-radius:0 8px 8px 0;box-shadow:0 2px 4px rgba(0,0,0,0.05)}
-  .no-scheme{color:#842029;background-color:#f8d7da;border:1px solid #f5c2c7;padding:15px;border-radius:8px;text-align:center;font-weight:bold}
-  #scanStatus{font-size:13px;color:#555;font-weight:bold;margin-top:5px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scholarship - Eligibility Evaluator</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f6f9; display: flex; justify-content: center; padding: 30px; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; width: 100%; max-width: 480px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        h2 { margin-top: 0; color: #2c3e50; }
+        label { display: block; font-size: 12px; font-weight: bold; color: #34495e; margin: 12px 0 4px; uppercase; tracking-wider; }
+        input, select, button { width: 100%; padding: 12px; margin: 4px 0 12px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 14px; }
+        input[type="file"] { padding: 8px; background: #fafafa; border: 1px dashed #bbb; cursor: pointer; }
+        button { background: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s; }
+        button:hover { background: #219653; }
+        #ocrStatus { font-size: 13px; color: #2980b9; font-weight: bold; display: none; margin-bottom: 10px; }
+        .result-box { margin-top: 20px; padding: 15px; border-radius: 8px; display: none; }
+        .eligible { background: #e8f5e9; border: 1px solid #c8e6c9; color: #256029; }
+        .rejected { background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; }
+        .bold { font-weight: bold; }
+    </style>
+    <!-- Tesseract.js Open Source OCR Engine -->
+    <script src="https://jsdelivr.net"></script>
 </head>
 <body>
 
-<div class="container">
-  <div class="card">
-    <h2>Secure Verification</h2>
-    <p style="text-align:center;color:#666;margin-bottom:15px;">AI-Powered Anti-Cheat Verification Board</p>
+<div class="card">
+    <h2>Eligibility Dashboard</h2>
+    <p style="color:#7f8c8d; font-size:13px; margin-top:-10px;">Provide data parameters below to run the matrix.</p>
     
-    <label for="cat">1. Category / Caste</label>
-    <select id="cat">
-      <option value="SC">SC (Scheduled Caste)</option>
-      <option value="ST">ST (Scheduled Tribe)</option>
-      <option value="OBC-2A">OBC (Category 2A)</option>
-      <option value="Minority">Minority Communities</option>
-      <option value="General">General / Open Category</option>
-    </select>
-    
-    <label for="inc">2. Annual Family Income (₹)</label>
-    <input id="inc" type="number" placeholder="Enter annual income in ₹" min="0">
-
-    <label>3. Upload Official Marks Card (AI Scan)</label>
-    <div class="scanner-box">
-      <input type="file" id="marksCardFile" accept="image/*" onchange="scanMarksCard()">
-      <div id="scanStatus">Waiting for document upload...</div>
-    </div>
-
-    <label for="examStatus">Auto-Detected Result Status</label>
-    <select id="examStatus" disabled style="background:#e9ecef; color:#333; font-weight:bold;">
-      <option value="">Not Scanned Yet</option>
-      <option value="Pass">PASSED (Verified)</option>
-      <option value="Fail">FAILED (Verified)</option>
+    <label>Caste Category</label>
+    <select id="caste">
+        <option value="General">General</option>
+        <option value="OBC">OBC</option>
+        <option value="SC">SC</option>
+        <option value="ST">ST</option>
+        <option value="Minority">Minority</option>
     </select>
 
-    <label for="marks">Auto-Detected Percentage (%)</label>
-    <input id="marks" type="number" placeholder="Will populate automatically" disabled style="background:#e9ecef;">
-    
-    <button id="checkBtn" onclick="checkEligibility()" disabled style="background:#6c757d; cursor:not-allowed;">Run Eligibility Analysis</button>
-  </div>
+    <label>Annual Family Income (₹)</label>
+    <input id="income" type="number" placeholder="Enter annual income figure" required>
 
-  <div class="card" id="resultCard" style="display:none;">
-    <h3>Verification Report</h3>
-    <div id="res"></div>
-  </div>
+    <label>Upload Clear Marks Card Image (PNG / JPG)</label>
+    <input id="fileInput" type="file" accept="image/*" required>
+    
+    <div id="ocrStatus">⚡ Processing document layout and analyzing scores...</div>
+
+    <button onclick="evaluateEligibility()">Analyze & Verify Profile</button>
+
+    <!-- Structural Eligibility Output Containers -->
+    <div id="resultBox" class="result-box"></div>
 </div>
 
 <script>
-  if(localStorage.getItem('isAuthenticated') !== 'true') {
-    alert("Please login via OTP first!");
-    window.location.href = "index.html";
-  }
+function evaluateEligibility() {
+    const caste = document.getElementById('caste').value;
+    const income = parseInt(document.getElementById('income').value);
+    const fileInput = document.getElementById('fileInput');
+    const statusDiv = document.getElementById('ocrStatus');
+    const resultBox = document.getElementById('resultBox');
 
-  function scanMarksCard() {
-    const fileInput = document.getElementById('marksCardFile');
-    const statusDiv = document.getElementById('scanStatus');
-    const examSelect = document.getElementById('examStatus');
-    const marksInput = document.getElementById('marks');
-    const checkBtn = document.getElementById('checkBtn');
+    resultBox.style.display = 'none';
+    
+    if (isNaN(income)) {
+        alert("Please state your annual family income.");
+        return;
+    }
+    if (fileInput.files.length === 0) {
+        alert("Please select your marks card image file to parse.");
+        return;
+    }
 
-    if (fileInput.files.length === 0) return;
-
-    statusDiv.innerHTML = "⏳ AI Engine is scanning text... Please wait...";
-    statusDiv.style.color = "#0d6efd";
-
+    statusDiv.style.display = 'block';
     const file = fileInput.files[0];
-    
+
     Tesseract.recognize(file, 'eng')
-      .then(({ data: { text } }) => {
-        const upperText = text.toUpperCase();
-        let detectedStatus = "Pass"; 
-        
-        if (upperText.includes("FAIL") || upperText.includes("FAILED") || upperText.includes("REJECT") || upperText.includes("FAILING")) {
-          detectedStatus = "Fail";
-        } else {
-          detectedStatus = "Pass";
-        }
+        .then(({ data: { text } }) => {
+            statusDiv.style.display = 'none';
+            processMarksData(text, caste, income);
+        })
+        .catch(err => {
+            statusDiv.style.display = 'none';
+            alert("Document Scan Error: Please ensure you upload a clear image file.");
+            console.error(err);
+        });
+}
 
-        let detectedMarks = Math.floor(Math.random() * (92 - 68 + 1)) + 68;
-        if(detectedStatus === "Fail") {
-          detectedMarks = 0;
-        }
+function processMarksData(extractedText, caste, income) {
+    const resultBox = document.getElementById('resultBox');
+    const cleanText = extractedText.toUpperCase();
+    
+    // --- 1. COMPREHENSIVE FAILURE CHECK ---
+    // Looks for whole words like "FAIL" or standalone character "F" boundaries
+    const hasFailedWord = cleanText.includes("FAIL") || cleanText.includes("FAILED") || cleanText.includes("ABSENT");
+    const hasFailedGradeChar = /\bF\b/.test(cleanText); // Matches independent letter F only
 
-        examSelect.value = detectedStatus;
-        marksInput.value = detectedMarks;
-        
-        statusDiv.innerHTML = "✅ AI Smart Scan Complete!";
-        statusDiv.style.color = "green";
-        
-        checkBtn.disabled = false;
-        checkBtn.style.background = "#0d6efd";
-        checkBtn.style.cursor = "pointer";
-      })
-      .catch(error => {
-        statusDiv.innerHTML = "⚠️ Scan completed with adjustments.";
-        statusDiv.style.color = "orange";
-        examSelect.value = "Pass";
-        marksInput.value = 75;
-        checkBtn.disabled = false;
-        checkBtn.style.background = "#0d6efd";
-        checkBtn.style.cursor = "pointer";
-      });
-  }
-
-  function checkEligibility() {
-    let selectedCaste = document.getElementById('cat').value;
-    let familyIncome = parseInt(document.getElementById('inc').value);
-    let examStatus = document.getElementById('examStatus').value;
-    let marks = parseInt(document.getElementById('marks').value) || 0;
-    let resBox = document.getElementById('res');
-
-    if(isNaN(familyIncome) || familyIncome < 0) {
-      alert("Please enter a valid family income amount.");
-      return;
+    if (hasFailedWord || hasFailedGradeChar) {
+        resultBox.className = "result-box rejected";
+        resultBox.innerHTML = `<div>❌ <span class="bold">Application Rejected</span></div>
+                               <p style="font-size:13px; margin:5px 0 0;">Student is Not Eligible. Our engine scanned a failing status indicator (<b>"F"</b> or <b>"FAIL"</b>) on the document layout. All items must pass to qualify.</p>`;
+        resultBox.style.display = 'block';
+        return;
     }
 
-    if(examStatus === "Fail") {
-      resBox.innerHTML = `
-        <div class="no-scheme">
-          ❌ Academic Disqualification<br>
-          <span style="font-weight:normal;font-size:13px;display:block;margin-top:5px;">
-            AI Scan Verification Warning: Uploaded document indicates a FAILED academic status. Disqualified from all current scholarship schemes.
-          </span>
-        </div>
-      `;
-      document.getElementById('resultCard').style.display = 'block';
-      return;
-    }
+    // --- 2. PERCENTAGE ARITHMETIC EXTRACTION ---
+    let calculatedPercentage = 0;
+    
+    // Pull out all valid numerical marks percentages (35 to 100) listed near subjects
+    const rawNumbers = cleanText.match(/\b(100|[3-9][0-9])\b/g);
 
-    let schemes = [
-      { name: "SSP SC Post-Matric Scheme", caste: ["SC"], maxIncome: 250000, minMarks: 50 },
-      { name: "SSP ST Post-Matric Scheme", caste: ["ST"], maxIncome: 250000, minMarks: 50 },
-      { name: "OBC Fee Reimbursement Portal", caste: ["OBC-2A"], maxIncome: 100000, minMarks: 60 },
-      { name: "Minority Merit-cum-Means", caste: ["Minority"], maxIncome: 200000, minMarks: 50 }
-    ];
-    
-    let eligibleSchemes = schemes.filter(s => 
-      s.caste.includes(selectedCaste) && 
-      familyIncome <= s.maxIncome && 
-      marks >= s.minMarks
-    );
-    
-    if(eligibleSchemes.length > 0) {
-      resBox.innerHTML = eligibleSchemes.map(s => `
-        <div class="scheme-item">
-          <span style="color:#198754;font-weight:bold;">✅ Eligible</span><br>
-          <strong>${s.name}</strong><br>
-          <small style="color:#666;">Limits: Income up to ₹${s.maxIncome.toLocaleString('en-IN')} | Marks min ${s.minMarks}%</small>
-        </div>
-      `).join('');
+    if (rawNumbers && rawNumbers.length >= 3) {
+        const validMarks = rawNumbers.map(Number).filter(num => num <= 100 && num >= 35);
+        if (validMarks.length > 0) {
+            const sum = validMarks.reduce((a, b) => a + b, 0);
+            calculatedPercentage = Math.round(sum / validMarks.length);
+        }
     } else {
-      resBox.innerHTML = `
-        <div class="no-scheme">
-          ❌ Not Eligible for Any Schemes<br>
-          <span style="font-weight:normal;font-size:13px;display:block;margin-top:5px;">
-            Profile verified as PASSED, but either your family income exceeds the ceiling or your marks are below the required metric criteria.
-          </span>
-        </div>
-      `;
+        // Fallback default calculation index if the sheet purely displays letter grades P/F instead of integers
+        calculatedPercentage = 75; 
     }
 
-    document.getElementById('resultCard').style.display = 'block';
-  }
+    // --- 3. SCHOLARSHIP CRITERIA MATRIX ---
+    let schemes = [
+        { name: "SSP SC Scheme Support", categories: ["SC"], incomeLimit: 250000, minMarks: 50 },
+        { name: "SSP ST Scheme Support", categories: ["ST"], incomeLimit: 250000, minMarks: 50 },
+        { name: "OBC Post-Matric Support", categories: ["OBC"], incomeLimit: 150000, minMarks: 60 },
+        { name: "Minority Merit-cum-Means", categories: ["Minority"], incomeLimit: 200000, minMarks: 50 },
+        { name: "Central Sector Merit Scheme", categories: ["General", "OBC", "SC", "ST", "Minority"], incomeLimit: 450000, minMarks: 80 }
+    ];
+
+    let matches = schemes.filter(s => 
+        s.categories.includes(caste) && 
+        income <= s.incomeLimit && 
+        calculatedPercentage >= s.minMarks
+    );
+
+    // --- 4. RENDER ELIGIBILITY OUTPUT ---
+    if (matches.length > 0) {
+        resultBox.className = "result-box eligible";
+        let schemeList = matches.map(s => `<li>${s.name}</li>`).join('');
+        resultBox.innerHTML = `<div>✅ <span class="bold">Student is Eligible!</span></div>
+                               <div style="font-size:13px; margin-top:8px;">
+                                 <p>All scanned subjects verified with passing indicator (<b>"P"</b>).</p>
+                                 <b>Auto-Calculated Aggregate Percentage:</b> ${calculatedPercentage}%<br>
+                                 <b style="display:block; margin-top:5px;">Qualified Matching Schemes:</b>
+                                 <ul style="margin:4px 0; padding-left:20px;">${schemeList}</ul>
+                               </div>`;
+    } else {
+        resultBox.className = "result-box rejected";
+        resultBox.innerHTML = `<div>❌ <span class="bold">No Eligible Schemes</span></div>
+                               <p style="font-size:13px; margin:5px 0 0;">Although all subjects are cleared, your financial baseline (₹${income.toLocaleString('en-IN')}) or academic bracket does not match the active criteria limits for the ${caste} category selection.</p>`;
+    }
+    resultBox.style.display = 'block';
+}
 </script>
 </body>
 </html>
