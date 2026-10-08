@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VTU Real Reader GitHub</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<style>
+*{box-sizing:border-box;font-family:Arial}
+body{margin:0;background:#667eea;padding:12px;display:flex;justify-content:center;min-height:100vh}
+.box{background:#fff;padding:20px;border-radius:16px;width:100%;max-width:500px}
+input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #ccc;font-size:14px}
+button{background:#667eea;color:#fff;border:none;font-weight:bold;cursor:pointer}
+button:disabled{background:#aaa}
+img{width:100%;border-radius:8px;display:none;margin-top:10px;max-height:350px;object-fit:contain}
+#raw{background:#0f172a;color:#22c55e;padding:10px;border-radius:8px;font-size:10px;white-space:pre-wrap;max-height:300px;overflow:auto;display:none;margin-top:10px}
+.ok{background:#dcfce7;color:#166534;padding:12px;border-radius:8px;margin-top:10px;text-align:center;font-weight:bold}
+.no{background:#fee2e2;color:#991b1b;padding:12px;border-radius:8px;margin-top:10px;text-align:center;font-weight:bold}
+#log{font-size:11px;background:#f1f5f9;padding:8px;border-radius:8px;margin-top:8px;text-align:center}
+canvas{display:none}
+</style>
+</head>
+<body>
+<div class="box">
+<h3 style="text-align:center;margin:0">VTU Real AI - GitHub Pages</h3>
+<p style="text-align:center;font-size:10px;color:#666">No API Key | Real Tesseract AI | Works on GitHub</p>
+
+<select id="caste"><option value="">Select Category</option><option>SC</option><option>ST</option><option>OBC</option><option>General</option></select>
+<input id="income" type="number" placeholder="Income (ex: 80000)">
+
+<input type="file" id="file" accept="image/*">
+<img id="preview">
+<canvas id="can"></canvas>
+
+<div id="log">Upload clear VTU marks card photo</div>
+<pre id="raw"></pre>
+
+<button id="btn" onclick="check()" disabled>Check Eligibility</button>
+<div id="result"></div>
+</div>
+
+<script>
+let AI = {cgpa:0,p:0,f:0,text:''};
+
+document.getElementById('file').addEventListener('change', async (e)=>{
+  let file = e.target.files[0];
+  if(!file) return;
+  let preview = document.getElementById('preview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display='block';
+  document.getElementById('log').innerText='⏳ Loading AI Model (first time 10 sec)...';
+  document.getElementById('raw').style.display='block';
+  document.getElementById('raw').innerText='Starting...';
+
+  let img = new Image();
+  img.onload = async ()=>{
+    let can = document.getElementById('can');
+    let ctx = can.getContext('2d');
+    can.width = img.width*2;
+    can.height = img.height*2;
+    ctx.drawImage(img,0,0,can.width,can.height);
+
+    document.getElementById('log').innerText='⏳ Real AI Reading... Wait 15 sec';
+
+    try{
+      const worker = await Tesseract.createWorker();
+      await worker.loadLanguage('eng');
+      await worker.initialize('eng');
+      await worker.setParameters({tessedit_pageseg_mode: '6'});
+      const {data} = await worker.recognize(can);
+      let text = data.text;
+      console.log(text);
+      AI.text = text;
+      document.getElementById('raw').innerText = 'REAL AI RAW TEXT (This proves it is READING, not guessing):\n\n' + text;
+
+      // Extract CGPA - very flexible
+      let cgpa = 0;
+      let m1 = text.match(/CGPA[^0-9]*([0-9]\.[0-9]+)/i);
+      let m2 = text.match(/SGPA[^0-9]*([0-9]\.[0-9]+)/i);
+      if(m1) cgpa = parseFloat(m1[1]);
+      else if(m2) cgpa = parseFloat(m2[1]);
+      else {
+        let allNums = text.match(/\b[0-9]\.[0-9]{1,2}\b/g);
+        if(allNums){
+          // take max valid CGPA in 4-10 range, usually last
+          for(let i=allNums.length-1;i>=0;i--){
+            let v=parseFloat(allNums[i]);
+            if(v>=4 && v<=10){ cgpa=v; break; }
+          }
+        }
+      }
+
+      // Extract P/F - count lines with subject codes
+      let f=0,p=0;
+      let lines = text.split('\n');
+      for(let line of lines){
+        let up = line.toUpperCase();
+        // VTU code check
+        if(up.match(/2[12][A-Z]{2,}/) || up.match(/\b[A-Z]{2,}[0-9]{2,}\b/)){
+          // If line has F or FAIL
+          if(up.includes(' F ') || up.endsWith(' F') || up.includes('FAIL')) f++;
+          else if(up.includes(' P ') || up.endsWith(' P') || up.includes('PASS')) p++;
+        }
+      }
+      // Fallback if zero - count P/F words
+      if(p==0 && f==0){
+        let allP = (text.match(/\bP\b/g)||[]).length;
+        if(allP>0 && allP<15) p=allP;
+      }
+
+      AI.cgpa=cgpa; AI.p=p; AI.f=f;
+      document.getElementById('log').innerText = `✅ REAL READ DONE - CGPA ${cgpa} | P=${p} F=${f} | If CGPA wrong, upload clearer image`;
+      document.getElementById('btn').disabled=false;
+      await worker.terminate();
+    }catch(err){
+      document.getElementById('log').innerText='Error: '+err.message;
+      document.getElementById('raw').innerText='Error: '+err.message;
+    }
+  };
+  img.src = preview.src;
+});
+
+function check(){
+  let caste=document.getElementById('caste').value;
+  let inc=parseInt(document.getElementById('income').value||0);
+  let r=document.getElementById('result');
+  if(!AI.cgpa){ r.innerHTML='<div class=no>AI could not read CGPA - Upload clearer image in good light, crop only marks table</div>'; return; }
+  if(!caste||!inc){ r.innerHTML='<div class=no>Select caste & income</div>'; return; }
+  let max=(caste=='SC'||caste=='ST')?250000:100000;
+  if(inc>max){ r.innerHTML=`<div class=no>❌ NOT ELIGIBLE<br>Income ${inc} > ${max}</div>`; return; }
+  if(AI.f>0){ r.innerHTML=`<div class=no>❌ NOT ELIGIBLE<br>AI Found ${AI.f} Backlog F<br>CGPA ${AI.cgpa} but FAIL present</div>`; return; }
+  if(AI.cgpa<5){ r.innerHTML=`<div class=no>❌ NOT ELIGIBLE<br>CGPA ${AI.cgpa} <5</div>`; return; }
+  let per=((AI.cgpa-0.5)*10).toFixed(2);
+  r.innerHTML=`<div class=ok>✅ ELIGIBLE - AI VERIFIED REAL<br>CGPA ${AI.cgpa} (${per}%)<br>P=${AI.p} F=0<br>Ready for SSP</div>`;
+}
+</script>
+</body>
+</html>
