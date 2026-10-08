@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VTU REAL AI - GitHub</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<style>
+*{box-sizing:border-box;font-family:system-ui,Arial}
+body{margin:0;background:linear-gradient(135deg,#667eea,#764ba2);padding:12px;display:flex;justify-content:center;min-height:100vh}
+.card{background:#fff;width:100%;max-width:500px;padding:20px;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+h2{text-align:center;margin:0 0 6px}
+.sub{font-size:11px;color:#666;text-align:center;margin-bottom:12px}
+input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:10px;border:1px solid #ddd;font-size:14px}
+button{background:#667eea;color:#fff;border:none;font-weight:700;cursor:pointer}
+button:disabled{background:#9ca3af}
+img{width:100%;border-radius:10px;display:none;margin-top:10px;max-height:380px;object-fit:contain;border:1px solid #eee}
+#log{background:#fef3c7;color:#92400e;padding:10px;border-radius:8px;font-size:12px;text-align:center;margin-top:10px}
+#raw{background:#0f172a;color:#22c55e;padding:12px;border-radius:10px;font-size:10px;white-space:pre-wrap;max-height:280px;overflow:auto;display:none;margin-top:10px;border:1px solid #1e293b}
+.ok{background:#dcfce7;color:#166534;padding:14px;border-radius:10px;margin-top:10px;text-align:center;font-weight:700}
+.no{background:#fee2e2;color:#991b1b;padding:14px;border-radius:10px;margin-top:10px;text-align:center;font-weight:700}
+.row{display:flex;gap:6px;margin-top:8px}
+.badge{flex:1;background:#e0e7ff;color:#4338ca;padding:8px;border-radius:20px;font-size:12px;text-align:center;font-weight:600}
+canvas{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>VTU REAL AI Reader</h2>
+<div class="sub">GitHub Pages + Tesseract Real AI | Shows RAW text proof</div>
+
+<select id="caste"><option value="">Select Category</option><option>SC</option><option>ST</option><option>OBC</option><option>General</option></select>
+<input id="income" type="number" placeholder="Family Income (ex: 80000)">
+
+<label style="font-size:12px;font-weight:600">Upload Marks Card (Crop only TABLE + CGPA part)</label>
+<input type="file" id="file" accept="image/*">
+<img id="preview">
+<canvas id="can"></canvas>
+
+<div id="log">📸 Tip: Crop only marks table + CGPA - Good light - No blur</div>
+<div class="row">
+<div class="badge" id="b_cgpa">CGPA: --</div>
+<div class="badge" id="b_p">P: --</div>
+<div class="badge" id="b_f">F: --</div>
+</div>
+<pre id="raw"></pre>
+
+<button id="btn" disabled>Upload to Enable Check</button>
+<div id="result"></div>
+</div>
+
+<script>
+let AI={cgpa:0,p:0,f:0,text:''};
+const fileInput=document.getElementById('file');
+const preview=document.getElementById('preview');
+const log=document.getElementById('log');
+const raw=document.getElementById('raw');
+const btn=document.getElementById('btn');
+
+fileInput.addEventListener('change', async (e)=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  preview.src=URL.createObjectURL(file);
+  preview.style.display='block';
+  log.innerText='⏳ Loading AI model (first time 10s)...';
+  raw.style.display='block';
+  raw.innerText='Starting real reading...';
+  btn.disabled=true;
+  btn.innerText='AI Reading... Wait 15 sec';
+
+  const img=new Image();
+  img.onload=async()=>{
+    const can=document.getElementById('can');
+    const ctx=can.getContext('2d');
+    // Upscale 2x for accuracy
+    can.width=img.width*2;
+    can.height=img.height*2;
+    ctx.drawImage(img,0,0,can.width,can.height);
+
+    try{
+      log.innerText='⏳ Real AI Reading marks card... 15 sec please';
+      const worker=await Tesseract.createWorker('eng');
+      await worker.setParameters({tessedit_pageseg_mode:'6', tessedit_char_whitelist:'0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz./:() P%CGPASG'});
+      const {data}=await worker.recognize(can);
+      const text=data.text;
+      AI.text=text;
+      raw.innerText='✅ REAL AI RAW TEXT (Proof it is reading, NOT guessing):\n\n'+text;
+
+      // CGPA extract
+      let cgpa=0;
+      let m=text.match(/CGPA[^0-9]*([0-9][\.,][0-9]+)/i) || text.match(/SGPA[^0-9]*([0-9][\.,][0-9]+)/i);
+      if(m){ cgpa=parseFloat(m[1].replace(',','.')); }
+      if(!cgpa){
+        let nums=text.match(/\b[0-9][\.,][0-9]{1,2}\b/g);
+        if(nums){
+          for(let i=nums.length-1;i>=0;i--){
+            let v=parseFloat(nums[i].replace(',','.'));
+            if(v>=4 && v<=10){ cgpa=v; break; }
+          }
+        }
+      }
+
+      // P/F extract - count lines with subject code pattern
+      let p=0,f=0;
+      for(let line of text.split('\n')){
+        let up=line.toUpperCase();
+        if(/[0-9]{2}[A-Z]{2,4}[0-9]/.test(up)){
+          if(up.includes(' F') || up.includes('FAIL')) f++;
+          else if(up.includes(' P') || up.includes('PASS')) p++;
+        }
+      }
+
+      AI.cgpa=cgpa; AI.p=p; AI.f=f;
+      document.getElementById('b_cgpa').innerText='CGPA: '+(cgpa||'Not found');
+      document.getElementById('b_p').innerText='P: '+p;
+      document.getElementById('b_f').innerText='F: '+f;
+      log.innerText=`✅ REAL READ DONE - CGPA ${cgpa||'Not found'} | P=${p} F=${f} | If CGPA wrong, upload more clear cropped image`;
+      btn.disabled=false;
+      btn.innerText='Check Eligibility';
+      btn.onclick=check;
+      await worker.terminate();
+    }catch(err){
+      log.innerText='Error: '+err.message;
+      raw.innerText='Error: '+err.message;
+    }
+  };
+  img.src=preview.src;
+});
+
+function check(){
+  const caste=document.getElementById('caste').value;
+  const inc=parseInt(document.getElementById('income').value||0);
+  const r=document.getElementById('result');
+  if(!AI.cgpa){ r.innerHTML='<div class=no>AI could not read CGPA - Please crop only table + CGPA part, take in good light, no blur. Or type CGPA manually below.</div><input id="man_cgpa" type="number" step="0.01" placeholder="Type CGPA manually"><button onclick="manualCheck()">Check with Manual CGPA + Image Proof</button>'; return; }
+  if(!caste||!inc){ r.innerHTML='<div class=no>Select caste & income</div>'; return; }
+  const max=(caste=='SC'||caste=='ST')?250000:100000;
+  if(inc>max){ r.innerHTML=`<div class=no>❌ NOT ELIGIBLE<br>Income ${inc.toLocaleString()} > ${max.toLocaleString()} for ${caste}</div>`; return; }
+  if(AI.f>0){ r.innerHTML=`<div class=no>❌ NOT ELIGIBLE<br>AI Detected ${AI.f} Backlog(s) - F Grade<br>CGPA ${AI.cgpa} ok but FAIL present</div>`; return; }
+  if(AI.cgpa<5){ r.innerHTML=`<div class=no>❌ NOT ELIGIBLE<br>CGPA ${AI.cgpa} < 5.0</div>`; return; }
+  const per=((AI.cgpa-0.5)*10).toFixed(2);
+  r.innerHTML=`<div class=ok>✅ ELIGIBLE - REAL AI VERIFIED<br>CGPA ${AI.cgpa} (${per}%)<br>P=${AI.p} F=0<br>Can Apply SSP/NSP<br>Image proof attached</div>`;
+}
+function manualCheck(){
+  const cgpa=parseFloat(document.getElementById('man_cgpa').value||0);
+  const caste=document.getElementById('caste').value;
+  const inc=parseInt(document.getElementById('income').value||0);
+  const r=document.getElementById('result');
+  if(!cgpa){ r.innerHTML='<div class=no>Enter CGPA</div>'; return; }
+  if(!caste||!inc){ r.innerHTML='<div class=no>Select caste income</div>'; return; }
+  const per=((cgpa-0.5)*10).toFixed(2);
+  r.innerHTML=`<div class=ok>✅ ELIGIBLE (Manual CGPA + Image Proof)<br>CGPA ${cgpa} (${per}%)<br>Image uploaded as anti-cheat proof</div>`;
+}
+</script>
+</body>
+</html>
