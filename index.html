@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scholarship Portal - Login</title>
+<style>
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
+  .card{background:white;padding:30px;border-radius:12px;width:360px;box-shadow:0 4px 15px rgba(0,0,0,0.1);text-align:center}
+  h2{color:#1e3a8a;margin-bottom:5px;text-transform:uppercase}
+  p{color:#666;font-size:14px;margin-bottom:20px}
+  input,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ccc;box-sizing:border-box;font-size:15px}
+  button{background:#0d6efd;color:white;border:none;font-weight:bold;cursor:pointer;transition:background 0.2s}
+  button:hover{background:#0b5ed7}
+  #msg{color:green;font-weight:bold;font-size:14px;margin:10px 0}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Scholarship Portal</h2>
+  <p>Secure Student OTP Verification</p>
+  
+  <input id="phone" type="tel" placeholder="Enter 10-Digit Mobile Number">
+  <button onclick="sendOTP()">Send Verification OTP</button>
+  
+  <div id="otpBox" style="display:none;">
+    <input id="otp" type="number" placeholder="Enter 6-Digit OTP">
+    <button onclick="verifyOTP()" style="background:#198754;">Verify & Open Dashboard</button>
+  </div>
+  <p id="msg"></p>
+</div>
+
+<script>
+  let generatedOTP;
+
+  function sendOTP(){
+    const phone = document.getElementById('phone').value;
+    if(phone.length < 10){
+      alert("Please enter a valid 10-digit phone number!");
+      return;
+    }
+    // Generate a random 6 digit OTP for the project demo
+    generatedOTP = Math.floor(100000 + Math.random() * 900000);
+    
+    document.getElementById('msg').style.color = "green";
+    document.getElementById('msg').innerText = "Sending OTP to " + phone + "...";
+    
+    setTimeout(() => {
+      document.getElementById('otpBox').style.display = "block";
+      document.getElementById('msg').innerHTML = "✅ OTP Sent! For your Faculty Demo, use OTP: <strong style='font-size:18px; color:#0d6efd;'>" + generatedOTP + "</strong>";
+    }, 1500);
+  }
+  
+  function verifyOTP(){
+    const userOTP = document.getElementById('otp').value;
+    if(userOTP == generatedOTP){
+      localStorage.setItem('isAuthenticated', 'true');
+      document.getElementById('msg').innerText = "Access Granted! Redirecting...";
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 1000);
+    } else {
+      document.getElementById('msg').style.color = "red";
+      document.getElementById('msg').innerText = "❌ Wrong OTP! Please check the code.";
+    }
+  }
+</script>
+</body>
+</html>

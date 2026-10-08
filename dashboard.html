@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scholarship Portal - Dashboard</title>
+<style>
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;display:flex;justify-content:center;padding:20px;margin:0}
+  .container{width:100%;max-width:450px}
+  .card{background:white;padding:25px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.1);margin-bottom:20px}
+  h2,h3{text-align:center;color:#1e3a8a;margin-top:0;text-transform:uppercase;letter-spacing:.5px}
+  label{font-weight:bold;display:block;margin-top:15px;color:#333;font-size:14px}
+  input,select,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ccc;box-sizing:border-box;font-size:15px}
+  button{background:#0d6efd;color:white;border:none;font-weight:bold;cursor:pointer;transition:background 0.2s;margin-top:15px}
+  button:hover{background:#0b5ed7}
+  .scheme-item{background:#f8f9fa;border-left:4px solid #198754;padding:12px;margin:10px 0;border-radius:0 8px 8px 0;box-shadow:0 2px 4px rgba(0,0,0,0.05)}
+  .no-scheme{color:#842029;background-color:#f8d7da;border:1px solid #f5c2c7;padding:15px;border-radius:8px;text-align:center;font-weight:bold}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+    <h2>Scholarship Verification</h2>
+    <p style="text-align:center;color:#666;margin-bottom:15px;">Check status using Academic & Social criteria</p>
+    
+    <label for="cat">1. Category / Caste</label>
+    <select id="cat">
+      <option value="SC">SC (Scheduled Caste)</option>
+      <option value="ST">ST (Scheduled Tribe)</option>
+      <option value="OBC-2A">OBC (Category 2A)</option>
+      <option value="Minority">Minority Communities</option>
+      <option value="General">General / Open Category</option>
+    </select>
+    
+    <label for="inc">2. Annual Family Income (₹)</label>
+    <input id="inc" type="number" placeholder="Enter annual income in ₹" min="0">
+
+    <label for="examStatus">3. Previous Exam Result</label>
+    <select id="examStatus" onchange="toggleMarks()">
+      <option value="Pass">PASSED</option>
+      <option value="Fail">FAILED</option>
+    </select>
+
+    <div id="marksBox">
+      <label for="marks">4. Previous Exam Percentage (%)</label>
+      <input id="marks" type="number" placeholder="e.g. 75" min="0" max="100">
+    </div>
+    
+    <button onclick="checkEligibility()">Check Eligibility Now</button>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none;">
+    <h3>Verification Report</h3>
+    <div id="res"></div>
+  </div>
+</div>
+
+<script>
+  // Security barrier logic check
+  if(localStorage.getItem('isAuthenticated') !== 'true') {
+    alert("Please login via OTP first!");
+    window.location.href = "index.html";
+  }
+
+  function toggleMarks() {
+    let status = document.getElementById('examStatus').value;
+    document.getElementById('marksBox').style.display = (status === 'Fail') ? 'none' : 'block';
+  }
+
+  function checkEligibility() {
+    let selectedCaste = document.getElementById('cat').value;
+    let familyIncome = parseInt(document.getElementById('inc').value);
+    let examStatus = document.getElementById('examStatus').value;
+    let marks = parseInt(document.getElementById('marks').value) || 0;
+    let resBox = document.getElementById('res');
+
+    if(isNaN(familyIncome) || familyIncome < 0) {
+      alert("Please enter a valid family income amount.");
+      return;
+    }
+
+    // Rule: If student failed the exam, flag immediately as ineligible
+    if(examStatus === "Fail") {
+      resBox.innerHTML = `
+        <div class="no-scheme">
+          ❌ Academic Disqualification<br>
+          <span style="font-weight:normal;font-size:13px;display:block;margin-top:5px;">
+            Students who have failed their previous examination are strictly ineligible for standard scholarship distributions.
+          </span>
+        </div>
+      `;
+      document.getElementById('resultCard').style.display = 'block';
+      return;
+    }
+
+    let schemes = [
+      { name: "SSP SC Post-Matric Scheme", caste: ["SC"], maxIncome: 250000, minMarks: 50 },
+      { name: "SSP ST Post-Matric Scheme", caste: ["ST"], maxIncome: 250000, minMarks: 50 },
+      { name: "OBC Fee Reimbursement Portal", caste: ["OBC-2A"], maxIncome: 100000, minMarks: 60 },
+      { name: "Minority Merit-cum-Means", caste: ["Minority"], maxIncome: 200000, minMarks: 50 }
+    ];
+    
+    let eligibleSchemes = schemes.filter(s => 
+      s.caste.includes(selectedCaste) && 
+      familyIncome <= s.maxIncome && 
+      marks >= s.minMarks
+    );
+    
+    if(eligibleSchemes.length > 0) {
+      resBox.innerHTML = eligibleSchemes.map(s => `
+        <div class="scheme-item">
+          <span style="color:#198754;font-weight:bold;">✅ Eligible</span><br>
+          <strong>${s.name}</strong><br>
+          <small style="color:#666;">Limits: Income up to ₹${s.maxIncome.toLocaleString('en-IN')} | Marks min ${s.minMarks}%</small>
+        </div>
+      `).join('');
+    } else {
+      resBox.innerHTML = `
+        <div class="no-scheme">
+          ❌ Not Eligible for Any Schemes<br>
+          <span style="font-weight:normal;font-size:13px;display:block;margin-top:5px;">
+            Your profile passed the exam, but either your family income exceeds the cap or your marks are below the scholarship's custom threshold.
+          </span>
+        </div>
+      `;
+    }
+
+    document.getElementById('resultCard').style.display = 'block';
+  }
+</script>
+</body>
+</html>
